@@ -1,64 +1,57 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+const ADMIN_EMAILS = [
+  "bjornlim@nexdoor.sg",
+  "abigailtang@nexdoor.sg",
+  "daveteo@nexdoor.sg",
+].map((email) => email.toLowerCase());
 
 export default function AdminLoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
 
   async function handleLogin(e) {
     e.preventDefault();
     setLoading(true);
-    setError("");
+    setErrorMsg("");
 
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({
-      email,
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!ADMIN_EMAILS.includes(normalizedEmail)) {
+      setErrorMsg("This email is not authorised for admin access.");
+      setLoading(false);
+      return;
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
       password,
     });
 
-    if (signInError) {
-      setError(signInError.message);
+    if (error) {
+      setErrorMsg(error.message);
       setLoading(false);
       return;
     }
 
-    const user = data?.user;
-
-    if (!user) {
-      setError("No user found.");
-      setLoading(false);
-      return;
-    }
-
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (profileError || profile?.role !== "admin") {
+    if (!data?.user?.email || !ADMIN_EMAILS.includes(data.user.email.toLowerCase())) {
       await supabase.auth.signOut();
-      setError("You do not have admin access.");
+      setErrorMsg("This account is not authorised for admin access.");
       setLoading(false);
       return;
     }
 
-    router.push("/admin");
+    window.location.href = "/admin";
   }
 
   async function handleGoogleLogin() {
     setLoading(true);
-    setError("");
+    setErrorMsg("");
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -68,73 +61,76 @@ export default function AdminLoginPage() {
     });
 
     if (error) {
-      setError(error.message);
+      setErrorMsg(error.message);
       setLoading(false);
     }
   }
 
   return (
-    <main className="min-h-screen bg-black text-white flex items-center justify-center px-6">
-      <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-2xl p-8 shadow-xl">
-        <h1 className="text-3xl font-semibold text-center mb-2">
-          NexDoor Admin Login
-        </h1>
-        <p className="text-sm text-neutral-400 text-center mb-8">
-          Sign in to access the admin dashboard.
+    <div className="flex min-h-screen items-center justify-center bg-black px-6">
+      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-neutral-900 p-8 shadow-[0_8px_30px_rgba(0,0,0,0.35)]">
+        <p className="mb-2 text-sm font-semibold uppercase tracking-[0.2em] text-[#c8a287]">
+          NexDoor Internal
+        </p>
+        <h1 className="mb-3 text-3xl font-bold text-white">Admin Login</h1>
+        <p className="mb-6 text-neutral-300">
+          Sign in to access the NexDoor admin dashboard.
         </p>
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-sm mb-2">Email</label>
+            <label className="mb-2 block text-sm text-neutral-200">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl bg-black border border-neutral-700 px-4 py-3 outline-none"
               placeholder="admin@nexdoor.sg"
+              className="w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white outline-none"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm mb-2">Password</label>
+            <label className="mb-2 block text-sm text-neutral-200">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl bg-black border border-neutral-700 px-4 py-3 outline-none"
               placeholder="Enter password"
+              className="w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white outline-none"
               required
             />
           </div>
 
-          {error ? (
-            <div className="text-red-400 text-sm">{error}</div>
+          {errorMsg ? (
+            <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+              {errorMsg}
+            </div>
           ) : null}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-white text-black font-medium py-3 hover:opacity-90 transition disabled:opacity-50"
+            className="w-full rounded-xl bg-white py-3 font-medium text-black transition hover:opacity-90 disabled:opacity-60"
           >
             {loading ? "Signing in..." : "Sign in"}
           </button>
         </form>
 
         <div className="my-5 flex items-center gap-3">
-          <div className="h-px bg-neutral-700 flex-1" />
+          <div className="h-px flex-1 bg-white/10" />
           <span className="text-xs text-neutral-500">OR</span>
-          <div className="h-px bg-neutral-700 flex-1" />
+          <div className="h-px flex-1 bg-white/10" />
         </div>
 
         <button
           onClick={handleGoogleLogin}
           disabled={loading}
-          className="w-full rounded-xl border border-neutral-700 py-3 hover:bg-neutral-800 transition disabled:opacity-50"
+          className="w-full rounded-xl border border-white/10 py-3 font-medium text-white transition hover:bg-white/5 disabled:opacity-60"
         >
           Continue with Google
         </button>
       </div>
-    </main>
+    </div>
   );
 }
