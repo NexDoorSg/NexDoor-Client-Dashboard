@@ -29,6 +29,24 @@ export default function LoginPage() {
     window.location.href = "/dashboard";
   }
 
+  async function handleGoogleLogin() {
+    setLoading(true);
+    setErrorMsg("");
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: "https://dashboard.nexdoor.sg/dashboard",
+      },
+    });
+
+    setLoading(false);
+
+    if (error) {
+      setErrorMsg(error.message);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#f7f5f2] text-[#36454f] flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
@@ -43,6 +61,23 @@ export default function LoginPage() {
         </div>
 
         <div className="rounded-3xl bg-white border border-black/5 shadow-[0_8px_30px_rgba(0,0,0,0.06)] p-8">
+          <div className="space-y-4 mb-6">
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              className="w-full rounded-xl border border-black/10 bg-white py-3 font-medium hover:bg-[#faf9f7] disabled:opacity-60"
+            >
+              Continue with Google
+            </button>
+          </div>
+
+          <div className="flex items-center gap-3 mb-6">
+            <div className="h-px bg-black/10 flex-1" />
+            <span className="text-sm text-[#7a858c]">or</span>
+            <div className="h-px bg-black/10 flex-1" />
+          </div>
+
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
               <label className="block text-sm font-medium mb-2">Email</label>
