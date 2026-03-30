@@ -13,12 +13,40 @@ export async function POST(request) {
     const token = authHeader.replace("Bearer ", "").trim();
 
     const body = await request.json();
+
     const email = body?.email?.trim()?.toLowerCase();
     const full_name = body?.full_name?.trim() || null;
+    const address = body?.address?.trim() || "";
+    const property_type = body?.property_type?.trim() || null;
+    const status = body?.status?.trim() || "active";
+    const purchase_price =
+      body?.purchase_price === "" ||
+      body?.purchase_price === null ||
+      body?.purchase_price === undefined
+        ? null
+        : Number(body.purchase_price);
+    const notes = body?.notes?.trim() || null;
 
     if (!email) {
       return NextResponse.json(
         { error: "Client email is required." },
+        { status: 400 }
+      );
+    }
+
+    if (!address) {
+      return NextResponse.json(
+        { error: "Property address is required." },
+        { status: 400 }
+      );
+    }
+
+    if (
+      purchase_price !== null &&
+      (Number.isNaN(purchase_price) || purchase_price < 0)
+    ) {
+      return NextResponse.json(
+        { error: "Purchase price must be a valid number." },
         { status: 400 }
       );
     }
@@ -41,7 +69,7 @@ export async function POST(request) {
       );
     }
 
-    // Use normal client to verify who is calling this API
+    // Verify caller
     const authClient = createClient(supabaseUrl, anonKey);
 
     const {
@@ -65,9 +93,10 @@ export async function POST(request) {
       );
     }
 
-    // Service role client for admin actions
+    // Admin client
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
+    // Create auth user
     const { data: createdUser, error: createUserError } =
       await adminClient.auth.admin.createUser({
         email,
@@ -90,6 +119,7 @@ export async function POST(request) {
       );
     }
 
+    // Create profile
     const { error: profileError } = await adminClient.from("profiles").upsert({
       id: newUserId,
       email,
@@ -104,8 +134,35 @@ export async function POST(request) {
       );
     }
 
-    return NextResponse.json({ success: true });
+    // Create property linked to client
+    const { data: propertyData, error: propertyError } = await adminClient
+      .from("properties")
+      .insert({
+        client_id: newUserId,
+        address,
+        property_type,
+        status,
+        purchase_price,
+        notes,
+      })
+      .select()
+      .single();
+
+    if (propertyError) {
+      return NextResponse.json(
+        { error: propertyError.message },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      client_id: newUserId,
+      property_id: propertyData?.id || null,
+    });
   } catch (error) {
+    console.error("create-client route error:", error);
+
     return NextResponse.json(
       { error: "Server error." },
       { status: 500 }
