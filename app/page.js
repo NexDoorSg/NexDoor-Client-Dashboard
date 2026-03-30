@@ -16,7 +16,7 @@ export default function HomePage() {
           </h1>
 
           <p className="mt-4 text-[#5f6b73]">
-            Track your property sale in one place.
+            Track your property journey in one place.
           </p>
 
           <div className="mt-8 flex justify-center">
