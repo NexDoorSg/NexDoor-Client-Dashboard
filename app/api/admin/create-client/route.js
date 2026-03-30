@@ -155,10 +155,44 @@ export async function POST(request) {
       );
     }
 
+    const propertyId = propertyData?.id || null;
+
+    if (!propertyId) {
+      return NextResponse.json(
+        { error: "Failed to create property." },
+        { status: 500 }
+      );
+    }
+
+    // Auto-create default seller case
+    const { data: sellerCaseData, error: sellerCaseError } = await adminClient
+      .from("seller_cases")
+      .insert({
+        client_id: newUserId,
+        property_id: propertyId,
+        stage: "live on market",
+        asking_price: null,
+        days_on_market: 0,
+        enquiries_count: 0,
+        viewings_count: 0,
+        offers_count: 0,
+        highest_offer: 0,
+      })
+      .select()
+      .single();
+
+    if (sellerCaseError) {
+      return NextResponse.json(
+        { error: sellerCaseError.message },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
       client_id: newUserId,
-      property_id: propertyData?.id || null,
+      property_id: propertyId,
+      seller_case_id: sellerCaseData?.id || null,
     });
   } catch (error) {
     console.error("create-client route error:", error);
