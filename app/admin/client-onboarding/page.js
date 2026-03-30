@@ -15,7 +15,7 @@ const emptyForm = {
   address: "",
   property_type: "",
   status: "active",
-  purchase_price: "",
+  asking_price: "",
   notes: "",
 };
 
@@ -90,7 +90,7 @@ export default function ClientOnboardingPage() {
           address: form.address,
           property_type: form.property_type,
           status: form.status,
-          purchase_price: form.purchase_price,
+          asking_price: form.asking_price,
           notes: form.notes,
         }),
       });
@@ -211,9 +211,9 @@ export default function ClientOnboardingPage() {
               />
 
               <NumberField
-                label="Purchase Price"
-                value={form.purchase_price}
-                onChange={(value) => setForm((prev) => ({ ...prev, purchase_price: value }))}
+                label="Asking Price"
+                value={form.asking_price}
+                onChange={(value) => setForm((prev) => ({ ...prev, asking_price: value }))}
               />
 
               <div>
