@@ -5,18 +5,22 @@ const ADMIN_EMAILS = [
   "bjornlim@nexdoor.sg",
   "abigailtang@nexdoor.sg",
   "daveteo@nexdoor.sg",
-];
+].map((email) => email.toLowerCase());
 
 export async function POST(request) {
   try {
-    const authHeader = request.headers.get("authorization");
+    const authHeader = request.headers.get("authorization") || "";
+    const token = authHeader.replace("Bearer ", "").trim();
 
     const body = await request.json();
     const email = body?.email?.trim()?.toLowerCase();
     const full_name = body?.full_name?.trim() || null;
 
     if (!email) {
-      return NextResponse.json({ error: "Client email is required." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Client email is required." },
+        { status: 400 }
+      );
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -30,27 +34,38 @@ export async function POST(request) {
       );
     }
 
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: {
-        headers: {
-          Authorization: authHeader || "",
-        },
-      },
-    });
+    if (!token) {
+      return NextResponse.json(
+        { error: "Missing access token." },
+        { status: 401 }
+      );
+    }
+
+    // Use normal client to verify who is calling this API
+    const authClient = createClient(supabaseUrl, anonKey);
 
     const {
       data: { user },
       error: userError,
-    } = await userClient.auth.getUser();
+    } = await authClient.auth.getUser(token);
 
     if (userError || !user?.email) {
-      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized." },
+        { status: 401 }
+      );
     }
 
-    if (!ADMIN_EMAILS.includes(user.email)) {
-      return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+    const callerEmail = user.email.toLowerCase();
+
+    if (!ADMIN_EMAILS.includes(callerEmail)) {
+      return NextResponse.json(
+        { error: `This account is not allowed: ${callerEmail}` },
+        { status: 403 }
+      );
     }
 
+    // Service role client for admin actions
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     const { data: createdUser, error: createUserError } =
@@ -60,13 +75,19 @@ export async function POST(request) {
       });
 
     if (createUserError) {
-      return NextResponse.json({ error: createUserError.message }, { status: 400 });
+      return NextResponse.json(
+        { error: createUserError.message },
+        { status: 400 }
+      );
     }
 
     const newUserId = createdUser?.user?.id;
 
     if (!newUserId) {
-      return NextResponse.json({ error: "Failed to create auth user." }, { status: 500 });
+      return NextResponse.json(
+        { error: "Failed to create auth user." },
+        { status: 500 }
+      );
     }
 
     const { error: profileError } = await adminClient.from("profiles").upsert({
@@ -77,11 +98,17 @@ export async function POST(request) {
     });
 
     if (profileError) {
-      return NextResponse.json({ error: profileError.message }, { status: 400 });
+      return NextResponse.json(
+        { error: profileError.message },
+        { status: 400 }
+      );
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: "Server error." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Server error." },
+      { status: 500 }
+    );
   }
 }
