@@ -116,32 +116,55 @@ export default function AdminPage() {
   }
 
   async function loadClients() {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("id, email, full_name, role, created_at")
-      .order("created_at", { ascending: false });
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    if (error) {
-      console.error("Failed to load clients:", error.message);
-      return;
+      const response = await fetch("/api/admin/clients", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${session?.access_token || ""}`,
+        },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error("Failed to load clients:", result.error);
+        return;
+      }
+
+      setClients(result.clients || []);
+    } catch (error) {
+      console.error("Failed to load clients:", error);
     }
-
-    const onlyClients = (data || []).filter((item) => item.role === "client");
-    setClients(onlyClients);
   }
 
   async function loadProperties() {
-    const { data, error } = await supabase
-      .from("properties")
-      .select("id, address, property_type, status, purchase_price, notes, client_id")
-      .order("address", { ascending: true });
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    if (error) {
-      console.error("Failed to load properties:", error.message);
-      return;
+      const response = await fetch("/api/admin/properties", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${session?.access_token || ""}`,
+        },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error("Failed to load properties:", result.error);
+        return;
+      }
+
+      setProperties(result.properties || []);
+    } catch (error) {
+      console.error("Failed to load properties:", error);
     }
-
-    setProperties(data || []);
   }
 
   async function handleLogout() {
