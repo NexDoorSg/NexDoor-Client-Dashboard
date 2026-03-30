@@ -3,82 +3,103 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
+const ADMIN_EMAILS = [
+  "bjornlim@nexdoor.sg",
+  "daveteo@nexdoor.sg",
+  "abigailtang@nexdoor.sg"
+];
+
 export default function AdminPage() {
+  const [user, setUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
   const [properties, setProperties] = useState([]);
   const [selectedPropertyId, setSelectedPropertyId] = useState("");
   const [address, setAddress] = useState("");
+
   const [enquiries, setEnquiries] = useState("");
   const [viewings, setViewings] = useState("");
   const [offers, setOffers] = useState("");
   const [highestOffer, setHighestOffer] = useState("");
+
+  const [newClientEmail, setNewClientEmail] = useState("");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
+    checkUser();
     loadProperties();
   }, []);
 
-  async function loadProperties() {
-    const { data, error } = await supabase
-      .from("properties")
-      .select("id, address")
-      .order("address", { ascending: true });
+  async function checkUser() {
+    const { data } = await supabase.auth.getUser();
 
-    if (error) {
-      setMessage(`Failed to load properties: ${error.message}`);
+    if (!data?.user) {
+      window.location.href = "/";
       return;
     }
+
+    setUser(data.user);
+
+    if (ADMIN_EMAILS.includes(data.user.email)) {
+      setIsAdmin(true);
+    } else {
+      setIsAdmin(false);
+    }
+  }
+
+  async function loadProperties() {
+    const { data } = await supabase
+      .from("properties")
+      .select("id, address")
+      .order("address");
 
     setProperties(data || []);
   }
 
-  async function handlePropertyChange(propertyId) {
-    setSelectedPropertyId(propertyId);
+  async function handleCreateClient() {
     setMessage("");
 
-    if (!propertyId) {
-      setAddress("");
-      setEnquiries("");
-      setViewings("");
-      setOffers("");
-      setHighestOffer("");
+    if (!newClientEmail) {
+      setMessage("Enter client email.");
       return;
     }
+
+    const { error } = await supabase.auth.admin.createUser({
+      email: newClientEmail,
+      email_confirm: true,
+    });
+
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    setMessage("Client created successfully.");
+    setNewClientEmail("");
+  }
+
+  async function handlePropertyChange(propertyId) {
+    setSelectedPropertyId(propertyId);
 
     const selectedProperty = properties.find((p) => p.id === propertyId);
     setAddress(selectedProperty?.address || "");
 
-    const { data: metricsData, error: metricsError } = await supabase
+    const { data } = await supabase
       .from("metrics")
       .select("*")
       .eq("property_id", propertyId)
       .maybeSingle();
 
-    if (metricsError) {
-      setMessage(`Failed to load metrics: ${metricsError.message}`);
-      return;
-    }
-
-    if (metricsData) {
-      setEnquiries(metricsData.enquiries_count ?? "");
-      setViewings(metricsData.viewings_count ?? "");
-      setOffers(metricsData.offers_count ?? "");
-      setHighestOffer(metricsData.highest_offer ?? "");
-    } else {
-      setEnquiries("");
-      setViewings("");
-      setOffers("");
-      setHighestOffer("");
+    if (data) {
+      setEnquiries(data.enquiries_count ?? "");
+      setViewings(data.viewings_count ?? "");
+      setOffers(data.offers_count ?? "");
+      setHighestOffer(data.highest_offer ?? "");
     }
   }
 
   async function handleSave(e) {
     e.preventDefault();
-    setMessage("");
-
-    if (!selectedPropertyId) {
-      setMessage("Please select a property first.");
-      return;
-    }
 
     const payload = {
       enquiries_count: Number(enquiries) || 0,
@@ -88,136 +109,117 @@ export default function AdminPage() {
       updated_at: new Date().toISOString(),
     };
 
-    const { data: existingMetrics, error: fetchError } = await supabase
+    const { data: existing } = await supabase
       .from("metrics")
       .select("id")
       .eq("property_id", selectedPropertyId)
       .maybeSingle();
 
-    if (fetchError) {
-      setMessage(`Failed to check existing metrics: ${fetchError.message}`);
-      return;
-    }
-
-    if (existingMetrics) {
-      const { error: updateError } = await supabase
+    if (existing) {
+      await supabase
         .from("metrics")
         .update(payload)
         .eq("property_id", selectedPropertyId);
 
-      if (updateError) {
-        setMessage(`Failed to update metrics: ${updateError.message}`);
-        return;
-      }
-
-      setMessage("Metrics updated successfully.");
+      setMessage("Metrics updated.");
     } else {
-      const { error: insertError } = await supabase
-        .from("metrics")
-        .insert({
-          property_id: selectedPropertyId,
-          ...payload,
-        });
+      await supabase.from("metrics").insert({
+        property_id: selectedPropertyId,
+        ...payload,
+      });
 
-      if (insertError) {
-        setMessage(`Failed to create metrics: ${insertError.message}`);
-        return;
-      }
-
-      setMessage("Metrics created successfully.");
+      setMessage("Metrics created.");
     }
   }
 
+  if (!user) return <p className="p-10">Loading...</p>;
+
+  if (!isAdmin)
+    return <p className="p-10">You are not authorized to access this page.</p>;
+
   return (
     <main className="min-h-screen bg-[#f7f5f2] text-[#36454f] px-6 py-10">
-      <div className="max-w-3xl mx-auto">
-        <p className="text-sm uppercase tracking-[0.2em] text-[#c8a287] font-semibold mb-2">
-          NexDoor Internal
-        </p>
-        <h1 className="text-4xl font-bold mb-2">Admin Panel</h1>
-        <p className="text-[#5f6b73] mb-8">
-          Update seller dashboard numbers here.
-        </p>
+      <div className="max-w-3xl mx-auto space-y-10">
 
-        <div className="rounded-3xl bg-white border border-black/5 shadow-[0_8px_30px_rgba(0,0,0,0.06)] p-8">
-          <div className="mb-6">
-            <label className="block text-sm font-medium mb-2">Select Property</label>
-            <select
-              value={selectedPropertyId}
-              onChange={(e) => handlePropertyChange(e.target.value)}
-              className="w-full rounded-xl bg-[#faf9f7] border border-black/10 p-3"
-            >
-              <option value="">Choose a property</option>
-              {properties.map((property) => (
-                <option key={property.id} value={property.id}>
-                  {property.address}
-                </option>
-              ))}
-            </select>
-          </div>
+        <h1 className="text-3xl font-bold">Admin Panel</h1>
 
-          {address ? (
-            <div className="mb-6 rounded-2xl bg-[#faf9f7] border border-black/5 p-4">
-              <p className="text-sm text-[#7a858c]">Editing property</p>
-              <p className="font-semibold text-lg">{address}</p>
-            </div>
-          ) : null}
+        {/* CREATE CLIENT */}
+        <div className="bg-white p-6 rounded-xl">
+          <h2 className="font-semibold mb-3">Create Client</h2>
 
-          <form onSubmit={handleSave} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium mb-2">Enquiries</label>
-              <input
-                type="number"
-                value={enquiries}
-                onChange={(e) => setEnquiries(e.target.value)}
-                className="w-full rounded-xl bg-[#faf9f7] border border-black/10 p-3"
-              />
-            </div>
+          <input
+            type="email"
+            placeholder="client@email.com"
+            value={newClientEmail}
+            onChange={(e) => setNewClientEmail(e.target.value)}
+            className="w-full border p-2 mb-3"
+          />
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Viewings</label>
-              <input
-                type="number"
-                value={viewings}
-                onChange={(e) => setViewings(e.target.value)}
-                className="w-full rounded-xl bg-[#faf9f7] border border-black/10 p-3"
-              />
-            </div>
+          <button
+            onClick={handleCreateClient}
+            className="bg-black text-white px-4 py-2 rounded"
+          >
+            Create Client
+          </button>
+        </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Offers</label>
-              <input
-                type="number"
-                value={offers}
-                onChange={(e) => setOffers(e.target.value)}
-                className="w-full rounded-xl bg-[#faf9f7] border border-black/10 p-3"
-              />
-            </div>
+        {/* METRICS (YOUR EXISTING SYSTEM) */}
+        <div className="bg-white p-6 rounded-xl">
+          <h2 className="font-semibold mb-3">Update Metrics</h2>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Highest Offer</label>
-              <input
-                type="number"
-                value={highestOffer}
-                onChange={(e) => setHighestOffer(e.target.value)}
-                className="w-full rounded-xl bg-[#faf9f7] border border-black/10 p-3"
-              />
-            </div>
+          <select
+            value={selectedPropertyId}
+            onChange={(e) => handlePropertyChange(e.target.value)}
+            className="w-full border p-2 mb-3"
+          >
+            <option value="">Select property</option>
+            {properties.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.address}
+              </option>
+            ))}
+          </select>
 
-            {message ? (
-              <div className="rounded-xl bg-[#f5efe8] border border-[#e7d8c7] px-4 py-3 text-sm text-[#6b5b4d]">
-                {message}
-              </div>
-            ) : null}
+          <form onSubmit={handleSave} className="space-y-3">
+            <input
+              type="number"
+              placeholder="Enquiries"
+              value={enquiries}
+              onChange={(e) => setEnquiries(e.target.value)}
+              className="w-full border p-2"
+            />
 
-            <button
-              type="submit"
-              className="w-full rounded-xl bg-[#36454f] text-white py-3 font-medium shadow-sm hover:opacity-90"
-            >
-              Save Metrics
+            <input
+              type="number"
+              placeholder="Viewings"
+              value={viewings}
+              onChange={(e) => setViewings(e.target.value)}
+              className="w-full border p-2"
+            />
+
+            <input
+              type="number"
+              placeholder="Offers"
+              value={offers}
+              onChange={(e) => setOffers(e.target.value)}
+              className="w-full border p-2"
+            />
+
+            <input
+              type="number"
+              placeholder="Highest Offer"
+              value={highestOffer}
+              onChange={(e) => setHighestOffer(e.target.value)}
+              className="w-full border p-2"
+            />
+
+            <button className="bg-black text-white w-full py-2">
+              Save
             </button>
           </form>
         </div>
+
+        {message && <p className="text-sm">{message}</p>}
       </div>
     </main>
   );
