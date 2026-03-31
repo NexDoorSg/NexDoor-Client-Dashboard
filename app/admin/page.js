@@ -8,6 +8,7 @@ const ADMIN_EMAILS = [
   "bjornlim@nexdoor.sg",
   "abigailtang@nexdoor.sg",
   "daveteo@nexdoor.sg",
+  "bjornlimdongxian@gmail.com", // ✅ ADDED THIS
 ].map((email) => email.toLowerCase());
 
 export default function AdminHomePage() {
