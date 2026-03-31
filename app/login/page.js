@@ -7,12 +7,15 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sendingReset, setSendingReset] = useState(false);
 
   async function handleLogin(e) {
     e.preventDefault();
     setLoading(true);
     setErrorMsg("");
+    setSuccessMsg("");
 
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -32,6 +35,7 @@ export default function LoginPage() {
   async function handleGoogleLogin() {
     setLoading(true);
     setErrorMsg("");
+    setSuccessMsg("");
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -47,78 +51,133 @@ export default function LoginPage() {
     }
   }
 
+  async function handleForgotPassword() {
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    if (!email.trim()) {
+      setErrorMsg("Please enter your email address first.");
+      return;
+    }
+
+    try {
+      setSendingReset(true);
+
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        email.trim(),
+        {
+          redirectTo: "https://dashboard.nexdoor.sg/reset-password",
+        }
+      );
+
+      if (error) {
+        setErrorMsg(error.message);
+        return;
+      }
+
+      setSuccessMsg(
+        "Password reset email sent. Please check your inbox and click the link in the email."
+      );
+    } catch (error) {
+      setErrorMsg("Unable to send reset email. Please try again.");
+    } finally {
+      setSendingReset(false);
+    }
+  }
+
   return (
-    <main className="min-h-screen bg-[#f7f5f2] text-[#36454f] flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <p className="text-sm uppercase tracking-[0.2em] text-[#c8a287] font-semibold mb-2">
-            NexDoor Seller Portal
-          </p>
-          <h1 className="text-4xl font-bold mb-3">Client Login</h1>
-          <p className="text-[#5f6b73]">
-            Sign in to view your property dashboard.
-          </p>
+    <div className="min-h-screen bg-[#f7f4ef] px-6 py-10 flex items-center justify-center">
+      <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-[0_20px_60px_rgba(0,0,0,0.08)]">
+        <p className="text-sm font-semibold tracking-[0.25em] uppercase text-[#c8a287]">
+          NexDoor Seller Portal
+        </p>
+
+        <h1 className="mt-4 text-4xl font-bold text-[#36454f]">
+          Client Login
+        </h1>
+
+        <p className="mt-3 text-sm leading-6 text-[#5d6873]">
+          Sign in to view your property dashboard.
+        </p>
+
+        <button
+          type="button"
+          onClick={handleGoogleLogin}
+          disabled={loading || sendingReset}
+          className="mt-6 w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-[#36454f] transition hover:bg-black/5 disabled:opacity-60"
+        >
+          Continue with Google
+        </button>
+
+        <div className="my-6 flex items-center gap-3">
+          <div className="h-px flex-1 bg-black/10" />
+          <span className="text-xs uppercase tracking-[0.2em] text-[#8b95a1]">
+            or
+          </span>
+          <div className="h-px flex-1 bg-black/10" />
         </div>
 
-        <div className="rounded-3xl bg-white border border-black/5 shadow-[0_8px_30px_rgba(0,0,0,0.06)] p-8">
-          <div className="space-y-4 mb-6">
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[#36454f]">
+              Email
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              required
+              className="w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-[#36454f] outline-none focus:border-[#c8a287]"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[#36454f]">
+              Password
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Your password"
+              required
+              className="w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-[#36454f] outline-none focus:border-[#c8a287]"
+            />
+          </div>
+
+          <div className="flex justify-end">
             <button
               type="button"
-              onClick={handleGoogleLogin}
-              disabled={loading}
-              className="w-full rounded-xl border border-black/10 bg-white py-3 font-medium hover:bg-[#faf9f7] disabled:opacity-60"
+              onClick={handleForgotPassword}
+              disabled={loading || sendingReset}
+              className="text-sm font-medium text-[#36454f] underline underline-offset-4 hover:opacity-70 disabled:opacity-60"
             >
-              Continue with Google
+              {sendingReset ? "Sending reset email..." : "Forgot password?"}
             </button>
           </div>
 
-          <div className="flex items-center gap-3 mb-6">
-            <div className="h-px bg-black/10 flex-1" />
-            <span className="text-sm text-[#7a858c]">or</span>
-            <div className="h-px bg-black/10 flex-1" />
-          </div>
-
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium mb-2">Email</label>
-              <input
-                type="email"
-                className="w-full rounded-xl bg-[#faf9f7] border border-black/10 px-4 py-3 outline-none"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                required
-              />
+          {errorMsg ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {errorMsg}
             </div>
+          ) : null}
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Password</label>
-              <input
-                type="password"
-                className="w-full rounded-xl bg-[#faf9f7] border border-black/10 px-4 py-3 outline-none"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Your password"
-                required
-              />
+          {successMsg ? (
+            <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+              {successMsg}
             </div>
+          ) : null}
 
-            {errorMsg ? (
-              <div className="rounded-xl bg-[#fff1f1] border border-red-200 px-4 py-3 text-sm text-red-600">
-                {errorMsg}
-              </div>
-            ) : null}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-xl bg-[#36454f] text-white py-3 font-medium shadow-sm hover:opacity-90 disabled:opacity-60"
-            >
-              {loading ? "Signing in..." : "Sign In"}
-            </button>
-          </form>
-        </div>
+          <button
+            type="submit"
+            disabled={loading || sendingReset}
+            className="w-full rounded-xl bg-[#36454f] px-4 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60"
+          >
+            {loading ? "Signing in..." : "Sign In"}
+          </button>
+        </form>
       </div>
-    </main>
+    </div>
   );
 }
