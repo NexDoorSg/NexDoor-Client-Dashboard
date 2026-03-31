@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 
 const ADMIN_EMAILS = [
   "bjornlim@nexdoor.sg",
+  "bjornlimdongxian@gmail.com",
   "abigailtang@nexdoor.sg",
   "daveteo@nexdoor.sg",
 ].map((email) => email.toLowerCase());
