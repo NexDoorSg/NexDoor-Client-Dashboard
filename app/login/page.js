@@ -1,15 +1,90 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
+
+const RESET_COOLDOWN_SECONDS = 60;
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+
+  const normalizedEmail = useMemo(() => email.trim().toLowerCase(), [email]);
+
+  function getCooldownStorageKey(targetEmail) {
+    return `nexdoor_reset_cooldown_${targetEmail}`;
+  }
+
+  function startCooldown(targetEmail, seconds = RESET_COOLDOWN_SECONDS) {
+    const expiresAt = Date.now() + seconds * 1000;
+    localStorage.setItem(
+      getCooldownStorageKey(targetEmail),
+      String(expiresAt)
+    );
+    setCooldown(seconds);
+  }
+
+  function loadCooldown(targetEmail) {
+    if (!targetEmail) {
+      setCooldown(0);
+      return;
+    }
+
+    const saved = localStorage.getItem(getCooldownStorageKey(targetEmail));
+    if (!saved) {
+      setCooldown(0);
+      return;
+    }
+
+    const expiresAt = Number(saved);
+    const secondsLeft = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+
+    if (secondsLeft <= 0) {
+      localStorage.removeItem(getCooldownStorageKey(targetEmail));
+      setCooldown(0);
+      return;
+    }
+
+    setCooldown(secondsLeft);
+  }
+
+  useEffect(() => {
+    loadCooldown(normalizedEmail);
+  }, [normalizedEmail]);
+
+  useEffect(() => {
+    if (cooldown <= 0 || !normalizedEmail) return;
+
+    const timer = setInterval(() => {
+      const saved = localStorage.getItem(getCooldownStorageKey(normalizedEmail));
+      if (!saved) {
+        setCooldown(0);
+        clearInterval(timer);
+        return;
+      }
+
+      const expiresAt = Number(saved);
+      const secondsLeft = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+
+      if (secondsLeft <= 0) {
+        localStorage.removeItem(getCooldownStorageKey(normalizedEmail));
+        setCooldown(0);
+        clearInterval(timer);
+        return;
+      }
+
+      setCooldown(secondsLeft);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [cooldown, normalizedEmail]);
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -18,7 +93,7 @@ export default function LoginPage() {
     setSuccessMsg("");
 
     const { error } = await supabase.auth.signInWithPassword({
-      email,
+      email: normalizedEmail,
       password,
     });
 
@@ -55,8 +130,15 @@ export default function LoginPage() {
     setErrorMsg("");
     setSuccessMsg("");
 
-    if (!email.trim()) {
+    if (!normalizedEmail) {
       setErrorMsg("Please enter your email address first.");
+      return;
+    }
+
+    if (cooldown > 0) {
+      setSuccessMsg(
+        `We’ve already sent a reset email. Please wait ${cooldown}s before trying again.`
+      );
       return;
     }
 
@@ -64,19 +146,31 @@ export default function LoginPage() {
       setSendingReset(true);
 
       const { error } = await supabase.auth.resetPasswordForEmail(
-        email.trim(),
+        normalizedEmail,
         {
           redirectTo: "https://dashboard.nexdoor.sg/reset-password",
         }
       );
 
       if (error) {
-        setErrorMsg(error.message);
+        if (
+          error.message?.toLowerCase().includes("rate limit") ||
+          error.message?.toLowerCase().includes("email rate limit exceeded")
+        ) {
+          startCooldown(normalizedEmail);
+          setSuccessMsg(
+            "We’ve already sent a reset email recently. Please check your inbox and wait about a minute before trying again."
+          );
+          return;
+        }
+
+        setErrorMsg(error.message || "Unable to send reset email.");
         return;
       }
 
+      startCooldown(normalizedEmail);
       setSuccessMsg(
-        "Password reset email sent. Please check your inbox and click the link in the email."
+        "If this email is registered, a password reset link has been sent. Please check your inbox."
       );
     } catch (error) {
       setErrorMsg("Unable to send reset email. Please try again.");
@@ -146,15 +240,25 @@ export default function LoginPage() {
             />
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex flex-col items-end gap-1">
             <button
               type="button"
               onClick={handleForgotPassword}
-              disabled={loading || sendingReset}
-              className="text-sm font-medium text-[#36454f] underline underline-offset-4 hover:opacity-70 disabled:opacity-60"
+              disabled={loading || sendingReset || cooldown > 0}
+              className="text-sm font-medium text-[#36454f] underline underline-offset-4 hover:opacity-70 disabled:opacity-50"
             >
-              {sendingReset ? "Sending reset email..." : "Forgot password?"}
+              {sendingReset
+                ? "Sending reset email..."
+                : cooldown > 0
+                ? `Try again in ${cooldown}s`
+                : "Forgot password?"}
             </button>
+
+            {cooldown > 0 ? (
+              <p className="text-xs text-[#8b95a1]">
+                Please wait before requesting another reset email.
+              </p>
+            ) : null}
           </div>
 
           {errorMsg ? (
