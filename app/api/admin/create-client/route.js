@@ -46,9 +46,18 @@ export async function POST(request) {
     const full_name = body?.full_name?.trim() || "";
     const password = body?.password?.trim() || "Temp123456!";
 
-    if (!email || !full_name) {
+    const address = body?.address?.trim() || "";
+    const property_type = body?.property_type?.trim() || "";
+    const status = body?.status?.trim() || "active";
+    const asking_price =
+      body?.asking_price !== undefined && body?.asking_price !== null && body?.asking_price !== ""
+        ? Number(body.asking_price)
+        : null;
+    const notes = body?.notes?.trim() || "";
+
+    if (!email || !full_name || !address) {
       return NextResponse.json(
-        { error: "Email and full name are required" },
+        { error: "Email, full name, and address are required" },
         { status: 400 }
       );
     }
@@ -96,6 +105,26 @@ export async function POST(request) {
       );
     }
 
+    const { data: propertyData, error: propertyError } = await supabaseAdmin
+      .from("properties")
+      .insert({
+        client_id: createdUser.id,
+        address,
+        property_type,
+        status,
+        purchase_price: asking_price,
+        notes,
+      })
+      .select()
+      .single();
+
+    if (propertyError) {
+      return NextResponse.json(
+        { error: propertyError.message },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
       user: {
@@ -104,6 +133,7 @@ export async function POST(request) {
         full_name,
         role: "client",
       },
+      property: propertyData,
     });
   } catch (error) {
     return NextResponse.json(
