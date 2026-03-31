@@ -8,6 +8,7 @@ const supabaseAdmin = createClient(
 
 const ADMIN_EMAILS = [
   "bjornlim@nexdoor.sg",
+  "bjornlimdongxian@gmail.com",
   "abigailtang@nexdoor.sg",
   "daveteo@nexdoor.sg",
 ].map((email) => email.toLowerCase());
@@ -33,7 +34,10 @@ export async function POST(request) {
     const requesterEmail = requester.email?.toLowerCase() || "";
 
     if (!ADMIN_EMAILS.includes(requesterEmail)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return NextResponse.json(
+        { error: `Forbidden. Logged in as: ${requesterEmail}` },
+        { status: 403 }
+      );
     }
 
     const body = await request.json();
