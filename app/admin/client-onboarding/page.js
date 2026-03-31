@@ -2,13 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-
-const ADMIN_EMAILS = [
-  "bjornlim@nexdoor.sg",
-  "abigailtang@nexdoor.sg",
-  "daveteo@nexdoor.sg",
-  "bjornlimdongxian@gmail.com",
-].map((email) => email.toLowerCase());
+import { isAdminEmail } from "@/lib/admin-emails";
 
 const emptyForm = {
   full_name: "",
@@ -44,7 +38,7 @@ export default function ClientOnboardingPage() {
       const email = (data.user.email || "").trim().toLowerCase();
       setCurrentUserEmail(email);
 
-      if (!ADMIN_EMAILS.includes(email)) {
+      if (!isAdminEmail(email)) {
         setIsAdmin(false);
         setLoading(false);
         return;
@@ -130,7 +124,9 @@ export default function ClientOnboardingPage() {
           </p>
           <h1 className="mb-3 text-3xl font-bold">Access denied</h1>
           <p className="mb-6 text-[#5f6b73]">
-            You are signed in as <span className="font-semibold">{currentUserEmail}</span>, but this page is only for approved admin accounts.
+            You are signed in as{" "}
+            <span className="font-semibold">{currentUserEmail}</span>, but this
+            page is only for approved admin accounts.
           </p>
           <button
             onClick={handleLogout}
@@ -152,7 +148,8 @@ export default function ClientOnboardingPage() {
           </p>
           <h1 className="text-4xl font-bold text-[#36454f]">Client Onboarding</h1>
           <p className="mt-3 max-w-2xl text-[#5f6b73]">
-            Create a new client profile and link a property for dashboard tracking.
+            Create a new client profile and link a property for dashboard
+            tracking.
           </p>
         </div>
 
@@ -171,14 +168,18 @@ export default function ClientOnboardingPage() {
               <TextField
                 label="Full Name"
                 value={form.full_name}
-                onChange={(value) => setForm((prev) => ({ ...prev, full_name: value }))}
+                onChange={(value) =>
+                  setForm((prev) => ({ ...prev, full_name: value }))
+                }
                 placeholder="Peiru Liao"
               />
 
               <TextField
                 label="Email"
                 value={form.email}
-                onChange={(value) => setForm((prev) => ({ ...prev, email: value }))}
+                onChange={(value) =>
+                  setForm((prev) => ({ ...prev, email: value }))
+                }
                 placeholder="client@email.com"
               />
             </div>
@@ -193,28 +194,36 @@ export default function ClientOnboardingPage() {
               <TextField
                 label="Address"
                 value={form.address}
-                onChange={(value) => setForm((prev) => ({ ...prev, address: value }))}
+                onChange={(value) =>
+                  setForm((prev) => ({ ...prev, address: value }))
+                }
                 placeholder="123 Example Road #10-11"
               />
 
               <TextField
                 label="Property Type"
                 value={form.property_type}
-                onChange={(value) => setForm((prev) => ({ ...prev, property_type: value }))}
+                onChange={(value) =>
+                  setForm((prev) => ({ ...prev, property_type: value }))
+                }
                 placeholder="HDB / Condo / Landed"
               />
 
               <TextField
                 label="Status"
                 value={form.status}
-                onChange={(value) => setForm((prev) => ({ ...prev, status: value }))}
+                onChange={(value) =>
+                  setForm((prev) => ({ ...prev, status: value }))
+                }
                 placeholder="active"
               />
 
               <NumberField
                 label="Asking Price"
                 value={form.asking_price}
-                onChange={(value) => setForm((prev) => ({ ...prev, asking_price: value }))}
+                onChange={(value) =>
+                  setForm((prev) => ({ ...prev, asking_price: value }))
+                }
               />
 
               <div>
@@ -222,7 +231,9 @@ export default function ClientOnboardingPage() {
                 <textarea
                   rows={5}
                   value={form.notes}
-                  onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, notes: e.target.value }))
+                  }
                   className="w-full rounded-xl border border-black/10 bg-[#faf9f7] p-3"
                   placeholder="Any useful notes about the property or client."
                 />
