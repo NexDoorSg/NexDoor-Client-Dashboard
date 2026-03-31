@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const ADMIN_EMAILS = [
   "bjornlim@nexdoor.sg",
+  "bjornlimdongxian@gmail.com",
   "abigailtang@nexdoor.sg",
   "daveteo@nexdoor.sg",
 ].map((email) => email.toLowerCase());
@@ -44,7 +45,10 @@ export async function GET(request) {
     const callerEmail = user.email.toLowerCase();
 
     if (!ADMIN_EMAILS.includes(callerEmail)) {
-      return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+      return NextResponse.json(
+        { error: `Forbidden. Logged in as: ${callerEmail}` },
+        { status: 403 }
+      );
     }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
