@@ -2,13 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
-
-const ADMIN_EMAILS = [
-  "bjornlim@nexdoor.sg",
-  "abigailtang@nexdoor.sg",
-  "daveteo@nexdoor.sg",
-  "bjornlimdongxian@gmail.com",
-].map((email) => email.toLowerCase());
+import { isAdminEmail } from "@/lib/admin-emails";
 
 const emptySellerCaseForm = {
   stage: "live on market",
@@ -102,7 +96,7 @@ export default function AdminPage() {
       const email = (data.user.email || "").trim().toLowerCase();
       setCurrentUserEmail(email);
 
-      if (!ADMIN_EMAILS.includes(email)) {
+      if (!isAdminEmail(email)) {
         setIsAdmin(false);
         setAuthChecked(true);
         setLoading(false);
@@ -186,7 +180,9 @@ export default function AdminPage() {
       return;
     }
 
-    const filteredProperties = properties.filter((item) => item.client_id === clientId);
+    const filteredProperties = properties.filter(
+      (item) => item.client_id === clientId
+    );
     setClientProperties(filteredProperties);
 
     const { data: sellerCaseData, error: sellerCaseError } = await supabase
@@ -196,7 +192,9 @@ export default function AdminPage() {
       .maybeSingle();
 
     if (sellerCaseError) {
-      setSellerCaseMessage(`Failed to load seller case: ${sellerCaseError.message}`);
+      setSellerCaseMessage(
+        `Failed to load seller case: ${sellerCaseError.message}`
+      );
       return;
     }
 
@@ -361,12 +359,30 @@ export default function AdminPage() {
       client_id: selectedClientId,
       property_id: sellerCaseForm.property_id,
       stage: sellerCaseForm.stage || "live on market",
-      asking_price: sellerCaseForm.asking_price === "" ? null : Number(sellerCaseForm.asking_price),
-      days_on_market: sellerCaseForm.days_on_market === "" ? 0 : Number(sellerCaseForm.days_on_market),
-      enquiries_count: sellerCaseForm.enquiries_count === "" ? 0 : Number(sellerCaseForm.enquiries_count),
-      viewings_count: sellerCaseForm.viewings_count === "" ? 0 : Number(sellerCaseForm.viewings_count),
-      offers_count: sellerCaseForm.offers_count === "" ? 0 : Number(sellerCaseForm.offers_count),
-      highest_offer: sellerCaseForm.highest_offer === "" ? 0 : Number(sellerCaseForm.highest_offer),
+      asking_price:
+        sellerCaseForm.asking_price === ""
+          ? null
+          : Number(sellerCaseForm.asking_price),
+      days_on_market:
+        sellerCaseForm.days_on_market === ""
+          ? 0
+          : Number(sellerCaseForm.days_on_market),
+      enquiries_count:
+        sellerCaseForm.enquiries_count === ""
+          ? 0
+          : Number(sellerCaseForm.enquiries_count),
+      viewings_count:
+        sellerCaseForm.viewings_count === ""
+          ? 0
+          : Number(sellerCaseForm.viewings_count),
+      offers_count:
+        sellerCaseForm.offers_count === ""
+          ? 0
+          : Number(sellerCaseForm.offers_count),
+      highest_offer:
+        sellerCaseForm.highest_offer === ""
+          ? 0
+          : Number(sellerCaseForm.highest_offer),
       updated_at: new Date().toISOString(),
     };
 
@@ -444,7 +460,9 @@ export default function AdminPage() {
 
       setListingLinkMessage("Listing link updated successfully.");
     } else {
-      const { error } = await supabase.from("seller_listing_links").insert(payload);
+      const { error } = await supabase
+        .from("seller_listing_links")
+        .insert(payload);
 
       if (error) {
         setListingLinkMessage(`Failed to add listing link: ${error.message}`);
@@ -507,7 +525,9 @@ export default function AdminPage() {
 
       setViewingMessage("Viewing updated successfully.");
     } else {
-      const { error } = await supabase.from("seller_viewings").insert(payload);
+      const { error } = await supabase
+        .from("seller_viewings")
+        .insert(payload);
 
       if (error) {
         setViewingMessage(`Failed to add viewing: ${error.message}`);
@@ -562,7 +582,9 @@ export default function AdminPage() {
 
       setFeedbackMessage("Feedback updated successfully.");
     } else {
-      const { error } = await supabase.from("seller_feedback").insert(payload);
+      const { error } = await supabase
+        .from("seller_feedback")
+        .insert(payload);
 
       if (error) {
         setFeedbackMessage(`Failed to add feedback: ${error.message}`);
@@ -625,7 +647,9 @@ export default function AdminPage() {
 
       setOfferMessage("Offer updated successfully.");
     } else {
-      const { error } = await supabase.from("seller_offers").insert(payload);
+      const { error } = await supabase
+        .from("seller_offers")
+        .insert(payload);
 
       if (error) {
         setOfferMessage(`Failed to add offer: ${error.message}`);
@@ -648,7 +672,9 @@ export default function AdminPage() {
   const feedbackViewings = useMemo(() => {
     return viewings.map((viewing) => ({
       ...viewing,
-      label: `${viewing.viewing_date || "-"} — ${viewing.buyer_name || "Unknown buyer"}`,
+      label: `${viewing.viewing_date || "-"} — ${
+        viewing.buyer_name || "Unknown buyer"
+      }`,
     }));
   }, [viewings]);
 
@@ -669,7 +695,9 @@ export default function AdminPage() {
           </p>
           <h1 className="text-3xl font-bold mb-3">Access denied</h1>
           <p className="text-[#5f6b73] mb-6">
-            You are signed in as <span className="font-semibold">{currentUserEmail}</span>, but this page is only for approved admin accounts.
+            You are signed in as{" "}
+            <span className="font-semibold">{currentUserEmail}</span>, but this
+            page is only for approved admin accounts.
           </p>
           <button
             onClick={handleLogout}
@@ -692,7 +720,8 @@ export default function AdminPage() {
             </p>
             <h1 className="text-4xl font-bold">Admin Panel</h1>
             <p className="text-[#5f6b73] mt-2">
-              Manage seller case details and push updates to the client dashboard.
+              Manage seller case details and push updates to the client
+              dashboard.
             </p>
           </div>
 
@@ -722,14 +751,18 @@ export default function AdminPage() {
             <option value="">Choose a client</option>
             {clients.map((client) => (
               <option key={client.id} value={client.id}>
-                {client.full_name ? `${client.full_name} — ${client.email}` : client.email}
+                {client.full_name
+                  ? `${client.full_name} — ${client.email}`
+                  : client.email}
               </option>
             ))}
           </select>
 
           {selectedClient ? (
             <div className="mt-4 rounded-2xl bg-[#faf9f7] border border-black/5 p-4">
-              <p className="font-semibold">{selectedClient.full_name || "No name added"}</p>
+              <p className="font-semibold">
+                {selectedClient.full_name || "No name added"}
+              </p>
               <p className="text-sm text-[#5f6b73]">{selectedClient.email}</p>
             </div>
           ) : null}
@@ -744,11 +777,16 @@ export default function AdminPage() {
 
             <form onSubmit={handleSaveSellerCase} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Linked Property</label>
+                <label className="block text-sm font-medium mb-2">
+                  Linked Property
+                </label>
                 <select
                   value={sellerCaseForm.property_id}
                   onChange={(e) =>
-                    setSellerCaseForm((prev) => ({ ...prev, property_id: e.target.value }))
+                    setSellerCaseForm((prev) => ({
+                      ...prev,
+                      property_id: e.target.value,
+                    }))
                   }
                   className="w-full rounded-xl bg-[#faf9f7] border border-black/10 p-3"
                 >
@@ -767,7 +805,10 @@ export default function AdminPage() {
                   type="text"
                   value={sellerCaseForm.stage}
                   onChange={(e) =>
-                    setSellerCaseForm((prev) => ({ ...prev, stage: e.target.value }))
+                    setSellerCaseForm((prev) => ({
+                      ...prev,
+                      stage: e.target.value,
+                    }))
                   }
                   className="w-full rounded-xl bg-[#faf9f7] border border-black/10 p-3"
                   placeholder="live on market"
@@ -778,38 +819,66 @@ export default function AdminPage() {
                 <InputField
                   label="Asking Price"
                   value={sellerCaseForm.asking_price}
-                  onChange={(value) => setSellerCaseForm((prev) => ({ ...prev, asking_price: value }))}
+                  onChange={(value) =>
+                    setSellerCaseForm((prev) => ({
+                      ...prev,
+                      asking_price: value,
+                    }))
+                  }
                 />
                 <InputField
                   label="Days on Market"
                   value={sellerCaseForm.days_on_market}
-                  onChange={(value) => setSellerCaseForm((prev) => ({ ...prev, days_on_market: value }))}
+                  onChange={(value) =>
+                    setSellerCaseForm((prev) => ({
+                      ...prev,
+                      days_on_market: value,
+                    }))
+                  }
                 />
                 <InputField
                   label="Enquiries"
                   value={sellerCaseForm.enquiries_count}
-                  onChange={(value) => setSellerCaseForm((prev) => ({ ...prev, enquiries_count: value }))}
+                  onChange={(value) =>
+                    setSellerCaseForm((prev) => ({
+                      ...prev,
+                      enquiries_count: value,
+                    }))
+                  }
                 />
                 <InputField
                   label="Viewings"
                   value={sellerCaseForm.viewings_count}
-                  onChange={(value) => setSellerCaseForm((prev) => ({ ...prev, viewings_count: value }))}
+                  onChange={(value) =>
+                    setSellerCaseForm((prev) => ({
+                      ...prev,
+                      viewings_count: value,
+                    }))
+                  }
                 />
                 <InputField
                   label="Offers"
                   value={sellerCaseForm.offers_count}
-                  onChange={(value) => setSellerCaseForm((prev) => ({ ...prev, offers_count: value }))}
+                  onChange={(value) =>
+                    setSellerCaseForm((prev) => ({
+                      ...prev,
+                      offers_count: value,
+                    }))
+                  }
                 />
                 <InputField
                   label="Highest Offer"
                   value={sellerCaseForm.highest_offer}
-                  onChange={(value) => setSellerCaseForm((prev) => ({ ...prev, highest_offer: value }))}
+                  onChange={(value) =>
+                    setSellerCaseForm((prev) => ({
+                      ...prev,
+                      highest_offer: value,
+                    }))
+                  }
                 />
               </div>
 
-              {sellerCaseMessage ? (
-                <Notice text={sellerCaseMessage} />
-              ) : null}
+              {sellerCaseMessage ? <Notice text={sellerCaseMessage} /> : null}
 
               <button
                 type="submit"
@@ -825,7 +894,8 @@ export default function AdminPage() {
               <div>
                 <h2 className="text-2xl font-bold">Listing Links</h2>
                 <p className="text-[#5f6b73] mt-2">
-                  These links appear inside the Listings tab on the client dashboard.
+                  These links appear inside the Listings tab on the client
+                  dashboard.
                 </p>
               </div>
               {editingListingLinkId ? (
@@ -843,19 +913,28 @@ export default function AdminPage() {
               <TextField
                 label="Platform"
                 value={listingLinkForm.platform}
-                onChange={(value) => setListingLinkForm((prev) => ({ ...prev, platform: value }))}
+                onChange={(value) =>
+                  setListingLinkForm((prev) => ({ ...prev, platform: value }))
+                }
                 placeholder="PropertyGuru"
               />
               <TextField
                 label="URL"
                 value={listingLinkForm.url}
-                onChange={(value) => setListingLinkForm((prev) => ({ ...prev, url: value }))}
+                onChange={(value) =>
+                  setListingLinkForm((prev) => ({ ...prev, url: value }))
+                }
                 placeholder="https://..."
               />
               <TextField
                 label="Listing Status"
                 value={listingLinkForm.listing_status}
-                onChange={(value) => setListingLinkForm((prev) => ({ ...prev, listing_status: value }))}
+                onChange={(value) =>
+                  setListingLinkForm((prev) => ({
+                    ...prev,
+                    listing_status: value,
+                  }))
+                }
                 placeholder="live"
               />
 
@@ -871,12 +950,17 @@ export default function AdminPage() {
 
             <div className="mt-6 space-y-3">
               {listingLinks.map((item) => (
-                <div key={item.id} className="rounded-2xl bg-[#faf9f7] border border-black/5 p-4">
+                <div
+                  key={item.id}
+                  className="rounded-2xl bg-[#faf9f7] border border-black/5 p-4"
+                >
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="font-semibold">{item.platform}</p>
                       <p className="text-sm text-[#5f6b73] break-all">{item.url}</p>
-                      <p className="text-xs text-[#7a858c] mt-1">Status: {item.listing_status}</p>
+                      <p className="text-xs text-[#7a858c] mt-1">
+                        Status: {item.listing_status}
+                      </p>
                     </div>
                     <button
                       type="button"
@@ -914,12 +998,17 @@ export default function AdminPage() {
 
             <form onSubmit={handleSaveViewing} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Viewing Date</label>
+                <label className="block text-sm font-medium mb-2">
+                  Viewing Date
+                </label>
                 <input
                   type="date"
                   value={viewingForm.viewing_date}
                   onChange={(e) =>
-                    setViewingForm((prev) => ({ ...prev, viewing_date: e.target.value }))
+                    setViewingForm((prev) => ({
+                      ...prev,
+                      viewing_date: e.target.value,
+                    }))
                   }
                   className="w-full rounded-xl bg-[#faf9f7] border border-black/10 p-3"
                 />
@@ -928,7 +1017,9 @@ export default function AdminPage() {
               <TextField
                 label="Viewing Time"
                 value={viewingForm.viewing_time}
-                onChange={(value) => setViewingForm((prev) => ({ ...prev, viewing_time: value }))}
+                onChange={(value) =>
+                  setViewingForm((prev) => ({ ...prev, viewing_time: value }))
+                }
                 placeholder="2:00 PM"
               />
 
@@ -937,7 +1028,10 @@ export default function AdminPage() {
                 <select
                   value={viewingForm.buyer_type}
                   onChange={(e) =>
-                    setViewingForm((prev) => ({ ...prev, buyer_type: e.target.value }))
+                    setViewingForm((prev) => ({
+                      ...prev,
+                      buyer_type: e.target.value,
+                    }))
                   }
                   className="w-full rounded-xl bg-[#faf9f7] border border-black/10 p-3"
                 >
@@ -949,14 +1043,18 @@ export default function AdminPage() {
               <TextField
                 label="Buyer Name"
                 value={viewingForm.buyer_name}
-                onChange={(value) => setViewingForm((prev) => ({ ...prev, buyer_name: value }))}
+                onChange={(value) =>
+                  setViewingForm((prev) => ({ ...prev, buyer_name: value }))
+                }
                 placeholder="Marcus Tan"
               />
 
               <TextField
                 label="Status"
                 value={viewingForm.status}
-                onChange={(value) => setViewingForm((prev) => ({ ...prev, status: value }))}
+                onChange={(value) =>
+                  setViewingForm((prev) => ({ ...prev, status: value }))
+                }
                 placeholder="scheduled"
               />
 
@@ -972,16 +1070,22 @@ export default function AdminPage() {
 
             <div className="mt-6 space-y-3">
               {viewings.map((item) => (
-                <div key={item.id} className="rounded-2xl bg-[#faf9f7] border border-black/5 p-4">
+                <div
+                  key={item.id}
+                  className="rounded-2xl bg-[#faf9f7] border border-black/5 p-4"
+                >
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="font-semibold">
-                        {item.viewing_date} {item.viewing_time ? `• ${item.viewing_time}` : ""}
+                        {item.viewing_date}
+                        {item.viewing_time ? ` • ${item.viewing_time}` : ""}
                       </p>
                       <p className="text-sm text-[#5f6b73]">
                         {item.buyer_type} • {item.buyer_name}
                       </p>
-                      <p className="text-xs text-[#7a858c] mt-1">Status: {item.status}</p>
+                      <p className="text-xs text-[#7a858c] mt-1">
+                        Status: {item.status}
+                      </p>
                     </div>
                     <button
                       type="button"
@@ -1001,7 +1105,8 @@ export default function AdminPage() {
               <div>
                 <h2 className="text-2xl font-bold">Feedback</h2>
                 <p className="text-[#5f6b73] mt-2">
-                  Add post-viewing feedback that will appear on the client dashboard.
+                  Add post-viewing feedback that will appear on the client
+                  dashboard.
                 </p>
               </div>
               {editingFeedbackId ? (
@@ -1017,11 +1122,16 @@ export default function AdminPage() {
 
             <form onSubmit={handleSaveFeedback} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Choose Viewing</label>
+                <label className="block text-sm font-medium mb-2">
+                  Choose Viewing
+                </label>
                 <select
                   value={feedbackForm.seller_viewing_id}
                   onChange={(e) =>
-                    setFeedbackForm((prev) => ({ ...prev, seller_viewing_id: e.target.value }))
+                    setFeedbackForm((prev) => ({
+                      ...prev,
+                      seller_viewing_id: e.target.value,
+                    }))
                   }
                   className="w-full rounded-xl bg-[#faf9f7] border border-black/10 p-3"
                 >
@@ -1037,24 +1147,39 @@ export default function AdminPage() {
               <TextField
                 label="Interest Level"
                 value={feedbackForm.interest_level}
-                onChange={(value) => setFeedbackForm((prev) => ({ ...prev, interest_level: value }))}
+                onChange={(value) =>
+                  setFeedbackForm((prev) => ({
+                    ...prev,
+                    interest_level: value,
+                  }))
+                }
                 placeholder="keen / maybe / not keen"
               />
 
               <TextField
                 label="Follow-up Status"
                 value={feedbackForm.follow_up_status}
-                onChange={(value) => setFeedbackForm((prev) => ({ ...prev, follow_up_status: value }))}
+                onChange={(value) =>
+                  setFeedbackForm((prev) => ({
+                    ...prev,
+                    follow_up_status: value,
+                  }))
+                }
                 placeholder="followed up"
               />
 
               <div>
-                <label className="block text-sm font-medium mb-2">Feedback Notes</label>
+                <label className="block text-sm font-medium mb-2">
+                  Feedback Notes
+                </label>
                 <textarea
                   rows={4}
                   value={feedbackForm.feedback_notes}
                   onChange={(e) =>
-                    setFeedbackForm((prev) => ({ ...prev, feedback_notes: e.target.value }))
+                    setFeedbackForm((prev) => ({
+                      ...prev,
+                      feedback_notes: e.target.value,
+                    }))
                   }
                   className="w-full rounded-xl bg-[#faf9f7] border border-black/10 p-3"
                   placeholder="Buyer likes the layout but feels the asking price is slightly high."
@@ -1073,22 +1198,32 @@ export default function AdminPage() {
 
             <div className="mt-6 space-y-3">
               {feedbackItems.map((item) => {
-                const linkedViewing = viewings.find((viewing) => viewing.id === item.seller_viewing_id);
+                const linkedViewing = viewings.find(
+                  (viewing) => viewing.id === item.seller_viewing_id
+                );
 
                 return (
-                  <div key={item.id} className="rounded-2xl bg-[#faf9f7] border border-black/5 p-4">
+                  <div
+                    key={item.id}
+                    className="rounded-2xl bg-[#faf9f7] border border-black/5 p-4"
+                  >
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <p className="text-sm text-[#7a858c]">
                           Viewing:{" "}
                           {linkedViewing
-                            ? `${linkedViewing.viewing_date || "-"} • ${linkedViewing.buyer_name || "Unknown buyer"}`
+                            ? `${linkedViewing.viewing_date || "-"} • ${
+                                linkedViewing.buyer_name || "Unknown buyer"
+                              }`
                             : "Unknown viewing"}
                         </p>
                         <p className="text-sm text-[#7a858c] mt-1">
-                          Interest: {item.interest_level || "-"} • Follow-up: {item.follow_up_status || "-"}
+                          Interest: {item.interest_level || "-"} • Follow-up:{" "}
+                          {item.follow_up_status || "-"}
                         </p>
-                        <p className="text-sm mt-2">{item.feedback_notes || "No notes."}</p>
+                        <p className="text-sm mt-2">
+                          {item.feedback_notes || "No notes."}
+                        </p>
                       </div>
                       <button
                         type="button"
@@ -1128,13 +1263,17 @@ export default function AdminPage() {
             <TextField
               label="Buyer Name"
               value={offerForm.buyer_name}
-              onChange={(value) => setOfferForm((prev) => ({ ...prev, buyer_name: value }))}
+              onChange={(value) =>
+                setOfferForm((prev) => ({ ...prev, buyer_name: value }))
+              }
               placeholder="Rachel Lim"
             />
             <InputField
               label="Offer Amount"
               value={offerForm.offer_amount}
-              onChange={(value) => setOfferForm((prev) => ({ ...prev, offer_amount: value }))}
+              onChange={(value) =>
+                setOfferForm((prev) => ({ ...prev, offer_amount: value }))
+              }
             />
 
             <div>
@@ -1143,7 +1282,10 @@ export default function AdminPage() {
                 type="date"
                 value={offerForm.offer_date}
                 onChange={(e) =>
-                  setOfferForm((prev) => ({ ...prev, offer_date: e.target.value }))
+                  setOfferForm((prev) => ({
+                    ...prev,
+                    offer_date: e.target.value,
+                  }))
                 }
                 className="w-full rounded-xl bg-[#faf9f7] border border-black/10 p-3"
               />
@@ -1152,7 +1294,9 @@ export default function AdminPage() {
             <TextField
               label="Status"
               value={offerForm.status}
-              onChange={(value) => setOfferForm((prev) => ({ ...prev, status: value }))}
+              onChange={(value) =>
+                setOfferForm((prev) => ({ ...prev, status: value }))
+              }
               placeholder="open / negotiating / accepted"
             />
 
@@ -1185,14 +1329,18 @@ export default function AdminPage() {
 
           <div className="mt-6 space-y-3">
             {offers.map((item) => (
-              <div key={item.id} className="rounded-2xl bg-[#faf9f7] border border-black/5 p-4">
+              <div
+                key={item.id}
+                className="rounded-2xl bg-[#faf9f7] border border-black/5 p-4"
+              >
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="font-semibold">
                       ${Number(item.offer_amount || 0).toLocaleString()}
                     </p>
                     <p className="text-sm text-[#5f6b73]">
-                      {item.buyer_name || "Unknown buyer"} • {item.offer_date || "-"} • {item.status || "open"}
+                      {item.buyer_name || "Unknown buyer"} •{" "}
+                      {item.offer_date || "-"} • {item.status || "open"}
                     </p>
                     <p className="text-sm mt-2">{item.remarks || "No remarks."}</p>
                   </div>
