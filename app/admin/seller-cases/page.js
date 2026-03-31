@@ -7,7 +7,8 @@ const ADMIN_EMAILS = [
   "bjornlim@nexdoor.sg",
   "abigailtang@nexdoor.sg",
   "daveteo@nexdoor.sg",
-];
+  "bjornlimdongxian@gmail.com",
+].map((email) => email.toLowerCase());
 
 const emptySellerCaseForm = {
   stage: "live on market",
@@ -98,7 +99,7 @@ export default function AdminPage() {
         return;
       }
 
-      const email = data.user.email || "";
+      const email = (data.user.email || "").trim().toLowerCase();
       setCurrentUserEmail(email);
 
       if (!ADMIN_EMAILS.includes(email)) {
